@@ -1,4 +1,4 @@
-build/levels.o: levels.c levels.h libs.h \
+build/banners.o: banners.c banners.h libs.h \
  /mnt/c/Users/lesli/workspace/tiny3d_Rum//src/t3d/t3d.h \
  /mnt/c/Users/lesli/workspace/tiny3d_Rum//src/t3d/t3dmath.h \
  /mnt/c/Users/lesli/workspace/tiny3d_Rum//src/t3d/t3dmodel.h \
