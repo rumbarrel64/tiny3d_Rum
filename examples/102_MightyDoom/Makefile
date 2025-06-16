@@ -12,12 +12,14 @@ src = $(wildcard *.c)
 assets_png = $(wildcard assets/*.png)
 assets_gltf = $(wildcard assets/*.glb)
 assets_ttf = $(wildcard assets/*.ttf)
-assets_xm = $(wildcard assets/*.xm) # new code for music
+#assets_xm = $(wildcard assets/*.xm) # new code for music
+assets_wav = $(wildcard assets/*.wav) # new code for music
 
 assets_conv = $(addprefix filesystem/,$(notdir $(assets_png:%.png=%.sprite))) \
 			  $(addprefix filesystem/,$(notdir $(assets_ttf:%.ttf=%.font64))) \
 			  $(addprefix filesystem/,$(notdir $(assets_gltf:%.glb=%.t3dm))) \
-			  $(addprefix filesystem/,$(notdir $(assets_xm))) # new code for music
+			  $(addprefix filesystem/,$(notdir $(assets_wav:%.wav=%.wav64))) # new code for music
+# 			  $(addprefix filesystem/,$(notdir $(assets_xm))) # new code for music
 
 all: $(PROJECT_NAME).z64
 
@@ -26,10 +28,11 @@ filesystem/%.sprite: assets/%.png
 	@echo "    [SPRITE] $@"
 	$(N64_MKSPRITE) $(MKSPRITE_FLAGS) -o filesystem "$<"
 
+# Font 
 filesystem/%.font64: assets/%.ttf
 	@mkdir -p $(dir $@)
 	@echo "    [FONT] $@"
-	$(N64_MKFONT) $(MKFONT_FLAGS) -s 9 -o filesystem "$<"
+	$(N64_MKFONT) $(MKFONT_FLAGS) -s 18 -o filesystem "$<"
 
 filesystem/%.t3dm: assets/%.glb
 	@mkdir -p $(dir $@)
@@ -38,10 +41,15 @@ filesystem/%.t3dm: assets/%.glb
 	$(N64_BINDIR)/mkasset -c 2 -w 256 -o filesystem $@
 
 # new code for music
-filesystem/%.xm: assets/%.xm
+#filesystem/%.xm: assets/%.xm
+#	@mkdir -p $(dir $@)
+#	@echo "    [XM] $@"
+#	$(N64_AUDIOCONV) $(AUDIOCONV_FLAGS) -o $(dir $@) "$<"
+
+filesystem/%.wav64: assets/%.wav
 	@mkdir -p $(dir $@)
-	@echo "    [XM] $@"
-	$(N64_AUDIOCONV) $(AUDIOCONV_FLAGS) -o $(dir $@) "$<"
+	@echo "    [AUDIO] $@"
+	@$(N64_AUDIOCONV) --wav-compress 1 --wav-resample 22050 -o filesystem "$<"
 # new code for music
 
 $(BUILD_DIR)/$(PROJECT_NAME).dfs: $(assets_conv)

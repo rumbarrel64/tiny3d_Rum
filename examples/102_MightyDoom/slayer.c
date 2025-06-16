@@ -4,13 +4,13 @@
 #include "collision.h"
 
 // Initial conditions of the player
-void player_init(Player *player, T3DMat4FP *matrix) {
+void player_init(Player *player) {
     
     // Slayer Positions
     player->move_dir = (T3DVec3){{0, 0, 0}};
     player->speed = 0.0f;
     player->blend_factor = 0.0f;
-    player->model_matrix = matrix;
+    player->model_matrix  = malloc_uncached(sizeof(T3DMat4FP));
 
     // Slayer Models
     player->model = t3d_model_load("rom:/slayer.t3dm");
@@ -33,6 +33,7 @@ void player_init(Player *player, T3DMat4FP *matrix) {
     // t3d_anim_set_playing(&player->anim_attack, false);
     // t3d_anim_attach(&player->anim_attack, &player->skel);
 }
+
 
 void player_draw(Player *player) {
     t3d_mat4fp_from_srt_euler(player->model_matrix,
@@ -90,6 +91,35 @@ void player_face_nearest_enemy(Player *player, Zombie *zombies, int zombie_count
 }
     */
 
+void draw_player_health_bar(const Player *player, T3DViewport *viewport) {
+
+    // Offset above the slayer's head
+    T3DVec3 world_pos = player->position;
+    world_pos.v[1] += 45.0f; // raise it above the head (50 is good if camera is behind player)
+
+    T3DVec3 screen_pos;
+    t3d_viewport_calc_viewspace_pos(viewport, &screen_pos, &world_pos);
+
+    const float width = 30.0f;
+    const float height = 4.0f;
+    // No current player health
+    //float health_pct = (float)z->health / 5;//ZOMBIE_MAX_HEALTH;
+
+    float x0 = screen_pos.v[0] - width / 2.0f;
+    float y0 = screen_pos.v[1];
+
+    // Background bar
+    rdpq_set_mode_fill(RGBA32(50, 50, 50, 255)); // background
+    rdpq_fill_rectangle(x0, y0, x0 + width, y0 + height);
+
+    // Health Bar
+    //rdpq_set_mode_fill(RGBA32(255 * (1.0f - health_pct), 255 * health_pct, 0, 255));
+    //rdpq_fill_rectangle(x0, y0, x0 + width * health_pct, y0 + height);
+
+    // Damage numbers (needs more work)
+    //rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, x0 + width / 2.0f - 4, y0 - 10, "%d", 1);
+}
+
 void player_update(Player *player, float delta_time, joypad_inputs_t joypad, joypad_buttons_t buttons, Zombie *zombies, int zombie_count) {
     T3DVec3 new_dir = {{
         (float)joypad.stick_x * 0.05f,
@@ -123,20 +153,16 @@ void player_update(Player *player, float delta_time, joypad_inputs_t joypad, joy
     bool blocked = false;
     for (int i = 0; i < zombie_count; i++) {
         if (!zombies[i].alive) continue;
-        if (check_overlap(&proposed_pos, &zombies[i].position, 5.0f)) {
+        if (check_overlap(&proposed_pos, &zombies[i].position, SLAYER_COLLISION_RADIUS)) {
             blocked = true;
             break;
         }
     }
 
-    // Only move if not blocked
+    // Only move if not blocked (right not hard stop, maybe look into Sliding collision)
     if (!blocked) {
         player->position = proposed_pos;
     }
-
-    // Update position
-    player->position.v[0] += player->move_dir.v[0] * player->speed;
-    player->position.v[2] += player->move_dir.v[2] * player->speed;
 
     // Limit player position inside the box
     const float BOX_SIZE = 140.0f;
@@ -164,12 +190,18 @@ void player_update(Player *player, float delta_time, joypad_inputs_t joypad, joy
 }
 
   // Cleanup Player
-  void player_cleanup(Player *player) {
+  void player_cleanup(Player *player) 
+  {
+    // Destroy animations first (they may reference skeletons)
     t3d_skeleton_destroy(&player->skel);
     t3d_skeleton_destroy(&player->skel_blend);
+    // Then destroy skeletons
     t3d_anim_destroy(&player->anim_idle);
     t3d_anim_destroy(&player->anim_walk);
+    // Free model matrix
+    free_uncached(player->model_matrix);
+    // Free models
     t3d_model_free(player->model);
     t3d_model_free(player->model_shadow);
-    // Optional: t3d_anim_destroy(&player->anim_attack);
-}
+    
+  }
