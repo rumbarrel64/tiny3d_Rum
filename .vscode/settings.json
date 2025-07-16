@@ -1,0 +1,27 @@
+{
+    "files.associations": {
+        "t3danim.h": "c",
+        "cstdlib": "c",
+        "t3dmodel.h": "c",
+        "t3ddebug.h": "c",
+        "compare": "c",
+        "cmath": "c",
+        "t3dskeleton.h": "c",
+        "t3d.h": "c",
+        "slayer.h": "c",
+        "libs.h": "c",
+        "banners.h": "c",
+        "algorithm": "c",
+        "format": "c",
+        "array": "c",
+        "memory": "c",
+        "istream": "c",
+        "functional": "c",
+        "tuple": "c",
+        "utility": "c",
+        "variant": "c",
+        "cstdint": "c",
+        "tutorial.h": "c",
+        "music.h": "c"
+    }
+}
