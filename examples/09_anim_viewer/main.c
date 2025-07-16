@@ -81,7 +81,8 @@ int main()
 
   #define MODEL_COUNT 3
   ModelAnim modelData[MODEL_COUNT] = {
-    { .model = t3d_model_load("rom:/cath.t3dm"), .scale = 0.0035f }, // "catherine.blend" Model from: https://github.com/buu342/N64-Sausage64
+    { .model = t3d_model_load("rom:/zombieWalking.t3dm"), .scale = 0.0035f }, // "catherine.blend" Model from: https://github.com/buu342/N64-Sausage64
+    //{ .model = t3d_model_load("rom:/cath.t3dm"), .scale = 0.0035f }, // "catherine.blend" Model from: https://github.com/buu342/N64-Sausage64
     { .model = t3d_model_load("rom:/animTest.t3dm"), .scale = 0.08f },
     { .model = t3d_model_load("rom:/enemyPlant00.t3dm"), .scale = 0.3f }
   };

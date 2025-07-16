@@ -46,7 +46,7 @@ int main()
   uint8_t colorDir[4]     = {0xFF, 0xAA, 0xAA, 0xFF};
 
   T3DModel *modelMap = t3d_model_load("rom:/map.t3dm");
-  T3DModel *modelShadow = t3d_model_load("rom:/shadow.t3dm");
+  T3DModel *modelShadow = t3d_model_load("rom:/enemyFloorIntro.t3dm");
 
   // Model Credits: Quaternius (CC0) https://quaternius.com/packs/easyenemy.html
   T3DModel *model = t3d_model_load("rom:/snake.t3dm");
