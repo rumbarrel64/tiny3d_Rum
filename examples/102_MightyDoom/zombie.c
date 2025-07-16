@@ -2,6 +2,10 @@
 #include "zombie.h"
 #include "collision.h"
 
+#define ATTACK_ANIM_LENGHT 2.9f
+#define ATTACK_ANIM_READY 0.666666f
+#define ATTACK_ANIM_FINISHING 2.266666f
+
 void zombie_init(Zombie *z, const T3DVec3 *start_pos) {
     
     // Zombie Positions
@@ -22,7 +26,7 @@ void zombie_init(Zombie *z, const T3DVec3 *start_pos) {
 
     // Zombie Skeletons for model
     z->skel = t3d_skeleton_create(z->model);
-    //z->skelBlend = t3d_skeleton_clone(&z->skel, false); // optimized for blending, has no matrices
+    z->skelBlend = t3d_skeleton_clone(&z->skel, false); // optimized for blending, has no matrices
     
     // Zombie Animations
     // Attach walk animation
@@ -33,9 +37,10 @@ void zombie_init(Zombie *z, const T3DVec3 *start_pos) {
     z->anim_attack = t3d_anim_create(z->model, "punching-left");
     t3d_anim_set_looping(&z->anim_attack, false); // don't loop this animation
     t3d_anim_set_playing(&z->anim_attack, false); // start in a paused state
-    t3d_anim_attach(&z->anim_attack, &z->skel);
+    t3d_anim_attach(&z->anim_attack, &z->skelBlend);
     z->is_attacking = false;
     z->attack_timer = 0.0f;
+    z->attack_blending_ratio = 0.0f;
 }
 
 void zombie_update(Zombie *z, const T3DVec3 *player_pos, float delta_time, Zombie *zombies, int count) {
@@ -84,15 +89,35 @@ void zombie_update(Zombie *z, const T3DVec3 *player_pos, float delta_time, Zombi
         t3d_anim_set_playing(&z->anim_attack, true);
         z->is_attacking = true;
         z->attack_timer = 0.0f;
+        z->attack_blending_ratio = 0.0f;
     }
 
     // Update animations
     if (z->is_attacking) {
+
+        if (z->anim_attack.time < ATTACK_ANIM_READY && z->attack_blending_ratio < 1.0f){
+            
+            z->attack_blending_ratio += delta_time / ATTACK_ANIM_READY; 
+            if (z->attack_blending_ratio > 1.0f) z->attack_blending_ratio = 1.0f;
+        }
+        
+        if (z->anim_attack.time > ATTACK_ANIM_FINISHING){
+            
+            z->attack_blending_ratio -= delta_time / (ATTACK_ANIM_LENGHT - ATTACK_ANIM_FINISHING); 
+            if (z->attack_blending_ratio < 0.0f) z->attack_blending_ratio = 0.0f;
+        }
+        
+        t3d_anim_update(&z->anim_walk, delta_time);
         t3d_anim_update(&z->anim_attack, delta_time);
+        t3d_skeleton_blend(&z->skel, &z->skel, &z->skelBlend, z->attack_blending_ratio);
+        
         if (!z->anim_attack.isPlaying) {
+            
             z->is_attacking = false;
         }
-    } else if (can_move) {
+    }
+
+    else if (can_move) {
         // Only update walk animation if zombie is walking
         t3d_anim_update(&z->anim_walk, delta_time);
     }

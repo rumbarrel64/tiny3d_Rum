@@ -13,14 +13,15 @@ typedef struct {
 
     // Skeletons
     T3DSkeleton skel;
-    //T3DSkeleton skelBlend; // New
+    T3DSkeleton skelBlend;
 
     // Animations
     T3DAnim anim_walk;
     T3DAnim anim_attack;
-    bool playing_attack; // New
-    bool is_attacking; // New
-    float attack_timer; // New
+    bool playing_attack; 
+    bool is_attacking; 
+    float attack_timer;
+    float attack_blending_ratio;
 
     T3DMat4FP *model_matrix;
     float speed;
