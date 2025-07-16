@@ -18,9 +18,6 @@ int main(void) {
     rdpq_debug_start(); // Only use for debugging purposes.
     joypad_init();
     t3d_init((T3DInitParams){});
-    
-    //Intilize particles
-    //tpx_init((TPXInitParams){});
 
     // Initialize Music
     music_init();

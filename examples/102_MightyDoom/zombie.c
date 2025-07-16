@@ -17,24 +17,36 @@ void zombie_init(Zombie *z, const T3DVec3 *start_pos) {
     z ->blood_time = 0;
     z ->blood_scale = 0.3f;
 
-    //z->model = t3d_model_load("rom:/slayer.t3dm"); 
-    z->model = t3d_model_load("rom:/zombieWalking.t3dm"); 
+    z->model = t3d_model_load("rom:/zombie.t3dm"); 
     z->model_matrix = malloc_uncached(sizeof(T3DMat4FP));
 
     // Zombie Skeletons for model
-    z->skel = t3d_skeleton_create(z->model); // Comment out for new model
+    z->skel = t3d_skeleton_create(z->model);
+    //z->skelBlend = t3d_skeleton_clone(&z->skel, false); // optimized for blending, has no matrices
     
     // Zombie Animations
-    z->anim_walk = t3d_anim_create(z->model, "walking-left"); // Comment out for new model
-    t3d_anim_attach(&z->anim_walk, &z->skel);  // Comment out for new model
+    // Attach walk animation
+    z->anim_walk = t3d_anim_create(z->model, "walking"); 
+    t3d_anim_attach(&z->anim_walk, &z->skel);  // main skeleton
+
+    // Attach attack animation
+    z->anim_attack = t3d_anim_create(z->model, "punching-left");
+    t3d_anim_set_looping(&z->anim_attack, false); // don't loop this animation
+    t3d_anim_set_playing(&z->anim_attack, false); // start in a paused state
+    t3d_anim_attach(&z->anim_attack, &z->skel);
+    z->is_attacking = false;
+    z->attack_timer = 0.0f;
 }
 
 void zombie_update(Zombie *z, const T3DVec3 *player_pos, float delta_time, Zombie *zombies, int count) {
 
     float dx = player_pos->v[0] - z->position.v[0];
     float dz = player_pos->v[2] - z->position.v[2];
-    
+
+    // Calculate distance between player and zombie (Pythagorean theorem)
     float dist = sqrtf(dx * dx + dz * dz);
+
+    bool can_move = false;
 
     if (dist > 1.0f) {
         dx /= dist;
@@ -46,33 +58,53 @@ void zombie_update(Zombie *z, const T3DVec3 *player_pos, float delta_time, Zombi
         next_pos.v[2] += dz * z->speed;
 
         // Check collision with player
-        if (check_overlap(&next_pos, player_pos, ZOMBIE_COLLISION_RADIUS)) return;
+        if (!check_overlap(&next_pos, player_pos, ZOMBIE_COLLISION_RADIUS)) {
+            // Check collision with other zombies
+            can_move = true;
+            for (int i = 0; i < count; i++) {
+                Zombie *other = &zombies[i];
+                if (other == z || other->health <= 0) continue;
+                if (check_overlap(&next_pos, &other->position, ZOMBIE_COLLISION_RADIUS)) {
+                    can_move = false;
+                    break;
+                }
+            }
 
-        // Check collision with other zombies
-        for (int i = 0; i < count; i++) {
-            Zombie *other = &zombies[i];
-            if (other == z || other->health <= 0) continue;
-            if (check_overlap(&next_pos, &other->position, ZOMBIE_COLLISION_RADIUS)) return;
+            // Apply movement only if not blocked
+            if (can_move) {
+                z->position = next_pos;
+                z->rotation_y = atan2f(dx, dz);
+            }
         }
-
-        // Apply movement only if not blocked
-        z->position = next_pos;
-        z->rotation_y = atan2f(dx, dz);
     }
 
-    t3d_anim_update(&z->anim_walk, delta_time);// Comment out for new model
-    t3d_skeleton_update(&z->skel); // Comment out for new model
+    // Trigger attack animation if within range
+    if (dist <= ZOMBIE_COLLISION_RADIUS + 10 && !z->is_attacking && !z->anim_attack.isPlaying) {
+        t3d_anim_set_time(&z->anim_attack, 0.0f);
+        t3d_anim_set_playing(&z->anim_attack, true);
+        z->is_attacking = true;
+        z->attack_timer = 0.0f;
+    }
 
+    // Update animations
+    if (z->is_attacking) {
+        t3d_anim_update(&z->anim_attack, delta_time);
+        if (!z->anim_attack.isPlaying) {
+            z->is_attacking = false;
+        }
+    } else if (can_move) {
+        // Only update walk animation if zombie is walking
+        t3d_anim_update(&z->anim_walk, delta_time);
+    }
+
+    // Final matrix build
+    t3d_skeleton_update(&z->skel);
     t3d_mat4fp_from_srt_euler(z->model_matrix,
-        // Scale
-        (float[3]){0.0035f, 0.0035f, 0.0035f}, // Comment out for new model
-        //(float[3]){1.0f, 1.0f, 1.0f},// New model
-
-        // Rotation
+        (float[3]){0.0030f, 0.0030f, 0.0030f},
         (float[3]){-4.5f, 0.0f, -z->rotation_y},
-        // Position
         z->position.v
     );
+
 }
 
 void draw_zombie_health_bar(const Zombie *z, T3DViewport *viewport) {
@@ -107,18 +139,18 @@ void draw_zombie_health_bar(const Zombie *z, T3DViewport *viewport) {
 void zombie_draw(Zombie *z) {
     t3d_matrix_push(z->model_matrix);
     rdpq_set_prim_color(RGBA32(255, 0, 0, 255));
-    t3d_model_draw_skinned(z->model, &z->skel); // Comment out for new model
+    t3d_model_draw_skinned(z->model, &z->skel); 
     t3d_matrix_pop(1);
 }
 
 void zombie_destroy(Zombie *z) {
     // Destroy animations first (they may reference skeletons)
-    t3d_anim_destroy(&z->anim_walk); // Comment out for new m
+    t3d_anim_destroy(&z->anim_walk); 
     // Then destroy skeletons
-    t3d_skeleton_destroy(&z->skel); // Comment out for new m
+    t3d_skeleton_destroy(&z->skel);
     // Free model matrix
-    free_uncached(z->model_matrix);
-    // Free model
+        free_uncached(z->model_matrix);
+            // Free model
     t3d_model_free(z->model);
 }
 
@@ -142,5 +174,5 @@ void zombie_destroy_all(Zombie *zombies, int count) {
     for (int i = 0; i < count; i++) {
         zombie_destroy(&zombies[i]);
     }
-    free_uncached(zombies);  // Only do this if you're done using it
+    free_uncached(zombies); 
 }

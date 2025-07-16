@@ -4,6 +4,9 @@
 #include "menu.h"
 #include "gameState.h"
 
+#define MENU_ITEM_COUNT 2
+#define JOY_THRESHOLD 32  // Adjust this if needed
+
 void menu_loop() {
 
     // Initialize Sprite(s)
@@ -54,6 +57,7 @@ void menu_loop() {
         music_play();
 
         joypad_poll();
+        joypad_inputs_t joypad = joypad_get_inputs(JOYPAD_PORT_1);
         joypad_buttons_t btn = joypad_get_buttons_pressed(JOYPAD_PORT_1);
         
         //
@@ -62,10 +66,34 @@ void menu_loop() {
             //return;
         }
 
-        if (btn.d_down || btn.d_up) {
+        static int stick_pressed = 0;
+
+        if (!stick_pressed) {
+            if (btn.d_down || joypad.stick_y < -JOY_THRESHOLD) {
+                menu_index++;
+                if (menu_index >= MENU_ITEM_COUNT)
+                    menu_index = 0;
+                stick_pressed = 1;
+                wait_ms(120);
+            } else if (btn.d_up || joypad.stick_y > JOY_THRESHOLD) {
+                if (menu_index == 0)
+                    menu_index = MENU_ITEM_COUNT - 1;
+                else
+                    menu_index--;
+                stick_pressed = 1;
+                wait_ms(120);
+            }
+        } else if (joypad.stick_y > -JOY_THRESHOLD && joypad.stick_y < JOY_THRESHOLD) {
+            // Reset when stick returns to center
+            stick_pressed = 0;
+        }
+
+        /*
+        if (btn.d_down || btn.d_up || joypad.stick_y) { // dobule check if joypad works
             menu_index = 1 - menu_index; // Toggle between 0 and 1
             wait_ms(120); // Prevents rapid scrolling
         }
+        */
 
     }
 

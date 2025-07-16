@@ -13,11 +13,8 @@
 #include "music.h"
 #include "banners.h"
 #include "gameState.h"
-// for debugging
-#include <stdio.h>
 
-
-// Needed for syncing?????
+// Function to get game runtime
 float get_time_s() {
   return (float)((double)get_ticks_us() / 1000000.0);
 }
@@ -69,8 +66,6 @@ void tutorial_loop() {
   // Initialize Player
 
   // Initialize Zombie(s)
-  //int zombie_count = 0;
-  //Zombie *zombies = malloc_uncached(sizeof(Zombie) * zombie_count);
   int zombie_count = level->zombie_count;
   Zombie *zombies = malloc_uncached(sizeof(Zombie) * zombie_count);
   for (int i = 0; i < zombie_count; i++) {
@@ -89,6 +84,22 @@ void tutorial_loop() {
   // Allocate array of T3DMat4FP based on enemy count
   T3DMat4FP* spawn_matrices = malloc(sizeof(T3DMat4FP) * enemy_count);
   T3DMat4FP* blood_matrices = malloc(sizeof(T3DMat4FP) * enemy_count);
+  
+  // Initialize Arrow (Only needed for tutorial)
+  int arrow_count = 3;
+  T3DMat4FP* arrow_matrices = malloc(sizeof(T3DMat4FP) * arrow_count);
+  T3DModel *arrow_model = t3d_model_load("rom:/arrow.t3dm");
+
+  // Build each arrow's transform with increasing Y position Once
+  for (int i = 0; i < arrow_count; i++) {
+    float y_offset = -155.0f + i * 20.0f;
+    t3d_mat4fp_from_srt_euler(
+      &arrow_matrices[i],
+      (float[3]){0.15f, 0.15f, 0.15f},    // Scale:
+      (float[3]){0.0f, 0.0f, 0.0f},       // Rotation:
+      (float[3]){0.0f, 0.15f, y_offset} // Position: X, Z, Y
+    );
+  };
   // Initialize Banners
 
   // Initialize Sprite(s)
@@ -168,67 +179,24 @@ void tutorial_loop() {
       // Draw order Matters!!!!!!
       // Level End logic
       if (enemy_count == 0) {
-          // Somehow figure out a fade in for the arrows?????
-          // Draw (Map With Portal)
-          map_draw(&map);
-          map_draw(&mapPortal);
+        // Draw (Map With Portal)
+        map_draw(&map);
+        map_draw(&mapPortal);
 
-          /* SYNC PIPE ISSUE
-
-          // Calculate Arrow Postition 
-          T3DVec3 base_world_pos = map.position;
-          base_world_pos.v[0] += 3.0f; // Adjust X if needed
-
-          const float width = 15.0f;
-          const float scale = 0.3f;
-          const float spacing = 15.0f;
-          // New
-          const float speed   = 0.4f;  // adjust for faster/slower scrolling
-          const float base_y  = -110.0f;
-
-          // Accumulator for arrow movement (declared static to persist between frames)
-          static float arrow_scroll_offset = 0.0f;
-          arrow_scroll_offset += speed;
-          if (arrow_scroll_offset >= spacing * 3.0f) {
-            arrow_scroll_offset -= spacing * 3.0f;
-          };
-          // End New
-          
-          // Scale the Arrow down
-          rdpq_blitparms_t parms = {
-              .scale_x = scale,
-              .scale_y = scale,
-          };
-
-          // Draw (Arrow (X3) loop)
-          for (int i = 0; i < 3; i++) {
-              T3DVec3 arrow_world = base_world_pos;
-              //arrow_world.v[2] -= 120.0f + i * spacing;
-              float offset = fmodf(arrow_scroll_offset + i * spacing, spacing * 3.0f);
-              arrow_world.v[2] += base_y - offset;
-
-              T3DVec3 screen_pos;
-              t3d_viewport_calc_viewspace_pos(vp, &screen_pos, &arrow_world);
-
-              float x0 = screen_pos.v[0] - width / 2.0f;
-              float y0 = screen_pos.v[1];
-
-              // Draw (Arrow)
-              // This is needed for sprites with a transparent background
-              rdpq_set_mode_standard();
-              rdpq_mode_alphacompare(1);
-              rdpq_sprite_blit(arrow, x0, y0, &parms);
-              // To make textures on meshes scale properly (Due to rdpq_set_mode_standard();)
-              rdpq_mode_persp(true);
-              
-          }; */
-
+        // Draw each arrow
+        // Reverse index order (2,1,0)
+        int current_arrow_index = arrow_count - 1 - ((int)(get_time_s() * 3.0f) % arrow_count);
+        t3d_matrix_push(&arrow_matrices[current_arrow_index]);
+        rdpq_set_prim_color(RGBA32(255, 0, 0, 255));  
+        t3d_model_draw(arrow_model);
+        t3d_matrix_pop(1);
+      
       } else {
           // Draw (Regular Map)
           map_draw(&mapWall);
           map_draw(&map);
       };
-
+ 
       // Draw (Banners)
       for (int i = 0; i < zombie_count; i++) {
         
@@ -250,10 +218,9 @@ void tutorial_loop() {
               (float[3]){0, 0, 0},
               (float[3]){zombies[i].position.v[0], 0, zombies[i].position.v[2]});
 
-          //rdpq_mode_persp(true);
           draw_floor_banner(&blood_matrices[i], BANNER_BLOOD);
       };
-      
+
         // 2. Draw SPAWN banner (only during first 4 seconds)
         if (get_time_s() - level_start_time < 4.0f) {
 
@@ -277,13 +244,12 @@ void tutorial_loop() {
       // Draw (Zombies)
       zombie_draw_all(zombies, zombie_count);
 
-      /* 
-      SYNC PIPE ISSUE
+      //SYNC PIPE ISSUE
       // Draw Health Bar (Zombie)
+      rdpq_sync_pipe();
       for (int i = 0; i < zombie_count; i++) {
         draw_zombie_health_bar(&zombies[i], vp);      // 2D bar
       }
-      */
 
       /*
       SYNY PIPE ISSUE
@@ -311,17 +277,18 @@ void tutorial_loop() {
 
       // BULLET
       //rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, posX, posY, "Bullet Position (X, Y): (%.4f, %.4f)", bullet.position.v[0], bullet.position.v[2]); posY += 10; //Displays position
-      rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, posX, posY, "Bullet Rotation: %.4f", bullet.rotation_y); posY += 10;
+      //rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, posX, posY, "Bullet Rotation: %.4f", bullet.rotation_y); posY += 10;
 
       //TIME
-      //rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, posX, posY, "After Death time: (%.4f)", get_time_s() - zombies[0].blood_time); posY += 10;
       //rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, posX, posY, "Game Time: (%.4f)", get_time_s()); posY += 10;
+      //rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, posX, posY, "After Death time: (%.4f)", get_time_s() - zombies[0].blood_time); posY += 10;
       //rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, posX, posY, "Reset Time: (%.4f)", get_time_s() - level_start_time); posY += 10;
       
 
       //SLAYER
+      rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, posX, posY, "Zomebie Player Distance (X, Y): (%.4f)", sqrt((player.position.v[0] - zombies[0].position.v[0]) * (player.position.v[0] - zombies[0].position.v[0]) + (player.position.v[2] - zombies[0].position.v[2]) * (player.position.v[2] - zombies[0].position.v[2]))); posY += 10; //Displays position
       //rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, posX, posY, "Player Positions (X, Y): (%.4f, %.4f)", player.position.v[0], player.position.v[2]); posY += 10; //Displays position
-      rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, posX, posY, "Slayer Rotation (Y):%.4f", player.rotation_y); posY += 10;
+      //rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, posX, posY, "Slayer Rotation (Y):%.4f", player.rotation_y); posY += 10;
       //rdpq_text_printf(NULL, FONT_BUILTIN_DEBUG_MONO, posX, posY, "Speed: %.4f", currSpeed); posY += 10; //Speed
 
       // ZOMBIE
@@ -340,8 +307,6 @@ void tutorial_loop() {
       };
 
     }
-
-    // Free Assests to prevent memory leaks
     // Music Stop
     music_stop();
     
@@ -357,7 +322,6 @@ void tutorial_loop() {
     player_cleanup(&player);
     
     // Sprite Cleanup
-    //sprite_free(arrow);
 
     // Zombie(s) Cleanup
     zombie_destroy_all(zombies, zombie_count);
@@ -366,5 +330,11 @@ void tutorial_loop() {
     banners_destroy();
     free(spawn_matrices);
     free(blood_matrices);
+
+    // Arrow Cleanup
+    // Free model matrix
+    free_uncached(arrow_matrices);
+    // Free model
+    t3d_model_free(arrow_model);
 
 }

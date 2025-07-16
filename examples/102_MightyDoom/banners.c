@@ -8,7 +8,7 @@ void banners_init(void) {
     spawn_in_model = t3d_model_load("rom:/enemyFloorIntro.t3dm"); // Enemy Spawn In
     // Enemy Alive
     // Enemy Dead
-    // Blood tha shrinks
+    // Shrinking Blood
     blood_model = t3d_model_load("rom:/bloodSplatter.t3dm"); // Enemy Spawn In
     // Player 
 }
@@ -22,7 +22,7 @@ void draw_floor_banner(const T3DMat4FP *matrix, BannerType type) {
             t3d_model_draw(spawn_in_model);
             break;
         case BANNER_BLOOD:
-            t3d_model_draw(blood_model);
+            t3d_model_draw(blood_model); // 2kb per call
             break;
         default:
             break;

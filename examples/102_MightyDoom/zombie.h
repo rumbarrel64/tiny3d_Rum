@@ -10,10 +10,17 @@ typedef struct {
     float rotation_y;
 
     T3DModel *model;
-    //T3DModel *model_shadow;
 
+    // Skeletons
     T3DSkeleton skel;
+    //T3DSkeleton skelBlend; // New
+
+    // Animations
     T3DAnim anim_walk;
+    T3DAnim anim_attack;
+    bool playing_attack; // New
+    bool is_attacking; // New
+    float attack_timer; // New
 
     T3DMat4FP *model_matrix;
     float speed;
@@ -24,6 +31,7 @@ typedef struct {
     // Tracks time after death
     float blood_time;
     float blood_scale;
+    
 } Zombie;
 
 // Initialize one zombie with a starting position

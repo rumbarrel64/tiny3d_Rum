@@ -8,7 +8,7 @@ const LevelData LEVEL_1 = {
     },
     .zombie_count = 3,
     .zombies = {
-        { .position = {{  0.0f, 20.0f, -96.0f }}, .rotation_y = 0.0f },
+        { .position = {{  0.0f, 0.15f, -96.0f }}, .rotation_y = 0.0f },
         { .position = {{ 82.0f, 0.15f, -123.0f }}, .rotation_y = 0.0f },
         { .position = {{-87.0f, 0.15f, -123.0f }}, .rotation_y = 0.0f }
     }
